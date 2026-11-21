@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onlayn Lug'at (Dictionary)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            width: 100%;
+            max-width: 600px;
+            padding: 35px 30px;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e293b;
+            margin-bottom: 25px;
+            font-size: 28px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: #3b82f6;
+        }
+
+        .search-box button {
+            padding: 12px 25px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-box button:hover {
+            background-color: #2563eb;
+        }
+
+        .result {
+            display: none;
+        }
+
+        .word-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .word-header h2 {
+            font-size: 32px;
+            color: #0f172a;
+            text-transform: capitalize;
+        }
+
+        .audio-btn {
+            background: #eff6ff;
+            color: #3b82f6;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.3s;
+        }
+
+        .audio-btn:hover {
+            background: #dbeafe;
+        }
+
+        .details {
+            display: flex;
+            gap: 15px;
+            color: #64748b;
+            font-size: 15px;
+            margin-bottom: 20px;
+        }
+
+        .meaning {
+            color: #334155;
+            font-size: 17px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .example {
+            color: #475569;
+            font-style: italic;
+            border-left: 4px solid #3b82f6;
+            padding-left: 15px;
+            margin-top: 15px;
+            font-size: 15px;
+        }
+
+        .error {
+            text-align: center;
+            color: #ef4444;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📖 Inglizcha Lug'at</h1>
+        
+        <div class="search-box">
+            <input type="text" id="word-input" placeholder="Inglizcha so'z kiriting (masalan: book)..." />
+            <button id="search-btn">Qidirish</button>
+        </div>
+
+        <div class="result" id="result-box"></div>
+    </div>
+
+    <script>
+        const url = "https://dictionaryapi.dev";
+        const resultBox = document.getElementById("result-box");
+        const searchBtn = document.getElementById("search-btn");
+        const wordInput = document.getElementById("word-input");
+        let currentAudio = null;
+
+        function searchWord() {
+            let inpWord = wordInput.value.trim();
+            if (!inpWord) return;
+
+            resultBox.style.display = "block";
+            resultBox.innerHTML = `<p style="text-align:center; color:#64748b;">Qidirilmoqda...</p>`;
+
+            fetch(`${url}${inpWord}`)
+                .then((response) => {
+                    if (!response.ok) throw new Error("So'z topilmadi");
+                    return response.json();
+                })
+                .then((data) => {
+                    const wordData = data[0];
+                    const meaningObj = wordData.meanings[0];
+                    const definitionObj = meaningObj.definitions[0];
+                    
+                    // Audio faylni topish
+                    const phoneticObj = wordData.phonetics.find(p => p.audio !== "");
+                    const audioSrc = phoneticObj ? phoneticObj.audio : "";
+
+                    resultBox.innerHTML = `
+                        <div class="word-header">
+                            <h2>${wordData.word}</h2>
+                            ${audioSrc ? `<button class="audio-btn" onclick="playSound()">🔊</button>` : ''}
+                        </div>
+                        <div class="details">
+                            <span>${meaningObj.partOfSpeech}</span>
+                            <span>${wordData.phonetic || ''}</span>
+                        </div>
+                        <p class="meaning"><strong>Ma'nosi:</strong> ${definitionObj.definition}</p>
+                        ${definitionObj.example ? `<p class="example">"${definitionObj.example}"</p>` : ''}
+                    `;
+
+                    if (audioSrc) {
+                        currentAudio = new Audio(audioSrc);
+                    } else {
+                        currentAudio = null;
+                    }
+                })
+                .catch(() => {
+                    resultBox.innerHTML = `<p class="error">Kechirasiz, bunday so'z topilmadi. Imloni tekshirib qayta urinib ko'ring.</p>`;
+                });
+        }
+
+        function playSound() {
+            if (currentAudio) {
+                currentAudio.play();
+            }
+        }
+
+        // Tugma bosilganda qidirish
+        searchBtn.addEventListener("click", searchWord);
+
+        // Enter tugmasi bosilganda qidirish
+        wordInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                searchWord();
+            }
+        });
+    </script>
+
+</body>
+</html>
